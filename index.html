@@ -1,0 +1,215 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Running Digit Span — Working Memory Assessment</title>
+    <meta name="description" content="Running Digit Span working memory assessment modeled after WAIS-V clinical format with ascending difficulty, discontinue rules, and partial credit scoring.">
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div id="app">
+        <!-- Welcome Screen -->
+        <div id="screen-welcome" class="screen active">
+            <div class="card welcome-card">
+                <h1>Running Digit Span</h1>
+                <p class="subtitle">Working Memory — Updating</p>
+                <div class="info-box">
+                    <h3>Instructions</h3>
+                    <p>
+                        You will hear a series of numbers spoken aloud.
+                        <strong>Listen carefully</strong> — you will not know how long the list will be.
+                    </p>
+                    <p>
+                        When the list stops, the screen will tell you how many of the
+                        <strong>final numbers</strong> to recall. Enter them in the order you heard them.
+                    </p>
+                    <p>
+                        You earn <strong>1 point for each digit</strong> you place in the correct position.
+                        You do not need to get all of them right to earn points.
+                    </p>
+                    <p>
+                        Difficulty increases as you progress. The test will end early if you
+                        score imperfectly on 3 consecutive items.
+                    </p>
+                </div>
+                <div class="info-box">
+                    <h3>Example</h3>
+                    <p>You hear: &ensp;7 &mdash; 4 &mdash; 1 &mdash; 9 &mdash; 0 &mdash; 7 &mdash; 5 &mdash; 2 &mdash; 8 &mdash; 3 &mdash; 1 &mdash; 5</p>
+                    <p>The screen asks for the last <strong>4</strong> digits.</p>
+                    <p>Correct answer: <strong>8 &ensp; 3 &ensp; 1 &ensp; 5</strong> &nbsp;(4 / 4 points)</p>
+                    <p>If you entered: <strong>8 &ensp; 3 &ensp; <span style="color:var(--error)">7</span> &ensp; 5</strong> &nbsp;you'd still earn 3 / 4 points.</p>
+                </div>
+                <div class="settings-row">
+                    <label for="voice-select">Voice:</label>
+                    <select id="voice-select"></select>
+                </div>
+                <div class="settings-row">
+                    <label for="voice-rate">Rate:</label>
+                    <input type="range" id="voice-rate" min="0.6" max="1.2" step="0.05" value="0.90">
+                    <span id="voice-rate-label">0.90x</span>
+                </div>
+                <div class="settings-row">
+                    <label for="chk-feedback">Feedback:</label>
+                    <label class="toggle-label">
+                        <input type="checkbox" id="chk-feedback" checked>
+                        <span>Show correct/incorrect after each trial</span>
+                    </label>
+                </div>
+                <button id="btn-start" class="btn btn-primary">Begin Test</button>
+                <p class="note">Ensure your volume is turned up. The test uses text-to-speech.<br>No numbers will be shown on screen — audio only.</p>
+            </div>
+        </div>
+
+        <!-- Ready Screen (between trials) -->
+        <div id="screen-ready" class="screen">
+            <div class="card stimulus-card">
+                <p class="trial-counter">Item <span id="ready-trial-num"></span> of <span id="ready-trial-total"></span></p>
+                <p id="ready-level-info" class="level-info"></p>
+                <p class="ready-prompt">Press <strong>Start</strong> when you are ready to listen.</p>
+                <button id="btn-go" class="btn btn-primary">Start</button>
+            </div>
+        </div>
+
+        <!-- Stimulus Presentation Screen (audio only) -->
+        <div id="screen-stimulus" class="screen">
+            <div class="card stimulus-card">
+                <div class="listening-indicator">
+                    <div class="pulse-ring"></div>
+                    <div class="pulse-ring delay-1"></div>
+                    <div class="pulse-ring delay-2"></div>
+                    <div class="speaker-icon">
+                        <svg viewBox="0 0 24 24" width="36" height="36" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon>
+                            <path d="M19.07 4.93a10 10 0 0 1 0 14.14"></path>
+                            <path d="M15.54 8.46a5 5 0 0 1 0 7.07"></path>
+                        </svg>
+                    </div>
+                </div>
+                <div id="listening-label" class="listening-label">Listen&hellip;</div>
+            </div>
+        </div>
+
+        <!-- Response Screen -->
+        <div id="screen-response" class="screen">
+            <div class="card response-card">
+                <h2 id="recall-prompt"></h2>
+                <p id="response-hint" class="response-hint"></p>
+
+                <div id="response-slots" class="response-slots"></div>
+
+                <div class="numpad">
+                    <button class="numpad-btn" data-digit="1">1</button>
+                    <button class="numpad-btn" data-digit="2">2</button>
+                    <button class="numpad-btn" data-digit="3">3</button>
+                    <button class="numpad-btn" data-digit="4">4</button>
+                    <button class="numpad-btn" data-digit="5">5</button>
+                    <button class="numpad-btn" data-digit="6">6</button>
+                    <button class="numpad-btn" data-digit="7">7</button>
+                    <button class="numpad-btn" data-digit="8">8</button>
+                    <button class="numpad-btn" data-digit="9">9</button>
+                    <button class="numpad-btn numpad-clear" data-action="clear">CLR</button>
+                    <button class="numpad-btn" data-digit="0">0</button>
+                    <button class="numpad-btn numpad-back" data-action="backspace">&larr;</button>
+                </div>
+
+                <div class="response-actions">
+                    <button id="btn-submit" class="btn btn-primary" disabled>Submit</button>
+                    <button id="btn-skip" class="btn btn-secondary">Don't Know</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Results Screen -->
+        <div id="screen-results" class="screen">
+            <div class="card results-card">
+                <h1>Test Complete</h1>
+
+                <p id="discontinued-notice" class="discontinued-notice" style="display:none"></p>
+
+                <div class="results-summary">
+                    <div class="result-item">
+                        <span class="result-label">Raw Score</span>
+                        <span id="result-total" class="result-value big"></span>
+                    </div>
+                    <div class="result-item">
+                        <span class="result-label">Scaled Score Est.</span>
+                        <span id="result-scaled" class="result-value big"></span>
+                    </div>
+                    <div class="result-item">
+                        <span class="result-label">Running Span</span>
+                        <span id="result-capacity" class="result-value big"></span>
+                    </div>
+                    <div class="result-item">
+                        <span class="result-label">Accuracy</span>
+                        <span id="result-accuracy" class="result-value"></span>
+                    </div>
+                </div>
+
+                <h3>Accuracy by Level</h3>
+                <div id="results-by-probe" class="results-by-block"></div>
+
+                <h3>Trial Detail</h3>
+                <div id="results-trial-detail" class="trial-detail-table-wrap"></div>
+
+                <div class="norm-table">
+                    <h3>Scoring &amp; Norms Reference</h3>
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Metric</th>
+                                <th>Value</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr><td>Scoring</td><td>1 point per digit in correct serial position (partial credit)</td></tr>
+                            <tr><td>Scaled Score</td><td>Mean = 10, SD = 3 (range 1–19)</td></tr>
+                            <tr><td>Discontinue</td><td>After 3 consecutive imperfect scores</td></tr>
+                            <tr><td>Typical Capacity</td><td>3–4 items (healthy adults)</td></tr>
+                        </tbody>
+                    </table>
+                    <table style="margin-top:12px">
+                        <thead>
+                            <tr>
+                                <th>Level (Probe)</th>
+                                <th>Typical Per-Digit Accuracy</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr><td>Last 3</td><td>~85–95 %</td></tr>
+                            <tr><td>Last 4</td><td>~70–85 %</td></tr>
+                            <tr><td>Last 5</td><td>~55–70 %</td></tr>
+                            <tr><td>Last 6</td><td>~45–60 %</td></tr>
+                            <tr><td>Last 7</td><td>~35–50 %</td></tr>
+                        </tbody>
+                    </table>
+                    <p class="norm-note">
+                        Research benchmarks from Bunting, Cowan &amp; Saults (2006, <em>QJEP</em>)
+                        and Cowan et al. (2005, <em>Cognitive Psychology</em>, 51, 42–100).
+                        WAIS-V scaled scores use proprietary age-based norm tables (Pearson, 2024) —
+                        the estimate above is approximate.
+                    </p>
+                </div>
+
+                <div class="norm-submit-section">
+                    <h3>📊 Help Build Norms</h3>
+                    <p class="norm-submit-desc">Submit your results anonymously to help build normative data. No personally identifiable information is collected.</p>
+                    <div class="norm-submit-row">
+                        <label for="input-age">Age (optional):</label>
+                        <input type="number" id="input-age" min="10" max="100" placeholder="e.g. 25" class="age-input">
+                    </div>
+                    <button id="btn-submit-norms" class="btn btn-success">Submit Results Anonymously</button>
+                    <div id="submit-status" class="submit-status" style="display:none"></div>
+                </div>
+
+                <div class="results-actions">
+                    <button id="btn-restart" class="btn btn-primary">Retake Test</button>
+                    <button id="btn-export" class="btn btn-secondary">Export Results</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="app.js"></script>
+</body>
+</html>
