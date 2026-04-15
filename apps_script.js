@@ -24,9 +24,30 @@ function doPost(e) {
     var sheet = SpreadsheetApp.getActiveSpreadsheet().getActiveSheet();
     var data = JSON.parse(e.postData.contents);
 
+    // Only accept completed tests
+    if (!data.completed) {
+      return ContentService.createTextOutput(
+        JSON.stringify({ status: 'skipped', reason: 'incomplete test' })
+      ).setMimeType(ContentService.MimeType.JSON);
+    }
+
+    // Check for duplicate sessionId
+    if (data.sessionId && sheet.getLastRow() > 1) {
+      var sessionCol = 1; // sessionId is the first column
+      var existingIds = sheet.getRange(2, sessionCol, sheet.getLastRow() - 1, 1).getValues();
+      for (var i = 0; i < existingIds.length; i++) {
+        if (existingIds[i][0] === data.sessionId) {
+          return ContentService.createTextOutput(
+            JSON.stringify({ status: 'duplicate', reason: 'session already submitted' })
+          ).setMimeType(ContentService.MimeType.JSON);
+        }
+      }
+    }
+
     // Define the column order
     var headers = [
-      'timestamp', 'age', 'totalScore', 'maxScore', 'accuracy',
+      'sessionId', 'timestamp', 'age', 'completed', 'totalTrialsExpected',
+      'totalScore', 'maxScore', 'accuracy',
       'trialsCompleted', 'discontinued', 'runningSpan', 'speechRate',
       'last_3_correct', 'last_3_max', 'last_3_pct',
       'last_4_correct', 'last_4_max', 'last_4_pct',
@@ -51,7 +72,7 @@ function doPost(e) {
     sheet.appendRow(row);
 
     return ContentService.createTextOutput(
-      JSON.stringify({ status: 'ok' })
+      JSON.stringify({ status: 'ok', sessionId: data.sessionId })
     ).setMimeType(ContentService.MimeType.JSON);
 
   } catch (err) {
@@ -61,7 +82,7 @@ function doPost(e) {
   }
 }
 
-// Allow GET requests too (for testing)
+// Allow GET requests too (for testing the endpoint is live)
 function doGet(e) {
   return ContentService.createTextOutput(
     JSON.stringify({ status: 'ok', message: 'Running Digit Span norm collector is active.' })

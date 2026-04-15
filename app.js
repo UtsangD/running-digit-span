@@ -48,6 +48,14 @@
     let speechRate = 0.9;
     let stimulusTimeout = null;
     let showAnswerFeedback = true;
+    let sessionId = null;
+
+    // Generate a unique session ID (UUID v4)
+    function generateSessionId() {
+        return 'xxxx-xxxx-xxxx'.replace(/x/g, () =>
+            Math.floor(Math.random() * 16).toString(16)
+        ) + '-' + Date.now().toString(36);
+    }
 
     // ── DOM references ──────────────────────────────────────
     const $ = (id) => document.getElementById(id);
@@ -215,6 +223,7 @@
         results = [];
         consecutiveImperfect = 0;
         discontinued = false;
+        sessionId = generateSessionId();
 
         showReadyScreen();
     });
@@ -657,8 +666,11 @@
         const maxScore = results.reduce((s, r) => s + r.maxPoints, 0);
 
         const payload = {
+            sessionId: sessionId,
             timestamp: new Date().toISOString(),
             age: (age && age >= 10 && age <= 100) ? age : '',
+            completed: true,
+            totalTrialsExpected: allItems.length,
             totalScore: totalScore,
             maxScore: maxScore,
             accuracy: maxScore > 0 ? Math.round((totalScore / maxScore) * 100) : 0,
