@@ -169,6 +169,26 @@
         return Math.floor(Math.random() * (max - min + 1)) + min;
     }
 
+    // Standard normal CDF approximation (Abramowitz & Stegun)
+    function cdfApprox(z) {
+        if (z < -6) return 0;
+        if (z > 6) return 1;
+        const a1 = 0.254829592, a2 = -0.284496736, a3 = 1.421413741;
+        const a4 = -1.453152027, a5 = 1.061405429, p = 0.3275911;
+        const sign = z < 0 ? -1 : 1;
+        const x = Math.abs(z) / Math.sqrt(2);
+        const t = 1 / (1 + p * x);
+        const erf = 1 - ((((a5 * t + a4) * t + a3) * t + a2) * t + a1) * t * Math.exp(-x * x);
+        return 0.5 * (1 + sign * erf);
+    }
+
+    // Ordinal number (1 → "1st", 2 → "2nd", etc.)
+    function ordinal(n) {
+        const s = ['th', 'st', 'nd', 'rd'];
+        const v = n % 100;
+        return n + (s[(v - 20) % 10] || s[v] || s[0]) + ' percentile';
+    }
+
     // ── Sequence Generation ─────────────────────────────────
     // Digits 0-9, no immediate repeats, no digit more than twice
     // in any window of 7 (per Bunting et al. methodology).
@@ -486,6 +506,30 @@
         let scaledEstimate = Math.round(10 + ((pctOfMax - 0.50) / 0.08) * 1);
         scaledEstimate = Math.max(1, Math.min(19, scaledEstimate)); // clamp 1-19
         $('result-scaled').textContent = scaledEstimate;
+
+        // IQ estimate from scaled score
+        // Subtest scaled: mean=10, SD=3 → IQ scale: mean=100, SD=15
+        // IQ = 100 + ((scaled - 10) / 3) * 15
+        let iqEstimate = Math.round(100 + ((scaledEstimate - 10) / 3) * 15);
+        iqEstimate = Math.max(55, Math.min(145, iqEstimate)); // clamp to reasonable range
+
+        // Classification label
+        let classification;
+        if (iqEstimate >= 130) classification = 'Very Superior';
+        else if (iqEstimate >= 120) classification = 'Superior';
+        else if (iqEstimate >= 110) classification = 'High Average';
+        else if (iqEstimate >= 90) classification = 'Average';
+        else if (iqEstimate >= 80) classification = 'Low Average';
+        else if (iqEstimate >= 70) classification = 'Borderline';
+        else classification = 'Extremely Low';
+
+        // Percentile from IQ (using z-score approximation)
+        const zScore = (iqEstimate - 100) / 15;
+        const percentile = Math.round(cdfApprox(zScore) * 100);
+
+        $('result-iq').textContent = iqEstimate;
+        $('result-classification').textContent = classification;
+        $('result-percentile').textContent = ordinal(percentile);
 
         // Per-level stats
         const levelStats = LEVELS.map((level, idx) => {
