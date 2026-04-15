@@ -635,7 +635,7 @@
     //
     // To set up: deploy the Google Apps Script (see apps_script.js)
     // and paste the web app URL below.
-    const SHEETS_ENDPOINT = ''; // ← Paste your Google Apps Script web app URL here
+    const SHEETS_ENDPOINT = 'https://script.google.com/macros/s/AKfycbxHtLcha-czj_ShaqhmyH5O4CEetldDm2fv3w7RjHJjjfdVB9xE89g9bOaoX5-X6fHnEg/exec'; // ← Paste your Google Apps Script web app URL here
 
     const btnSubmit = $('btn-submit-norms');
     if (btnSubmit) {
@@ -690,14 +690,14 @@
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(payload),
         })
-        .then(() => {
-            setSubmitStatus('✓ Results submitted anonymously. Thank you!', 'success');
-        })
-        .catch((err) => {
-            console.error('Submit error:', err);
-            setSubmitStatus('Failed to submit. You can still export as JSON.', 'error');
-            btnSubmit.disabled = false;
-        });
+            .then(() => {
+                setSubmitStatus('✓ Results submitted anonymously. Thank you!', 'success');
+            })
+            .catch((err) => {
+                console.error('Submit error:', err);
+                setSubmitStatus('Failed to submit. You can still export as JSON.', 'error');
+                btnSubmit.disabled = false;
+            });
     }
 
     function setSubmitStatus(msg, type) {
