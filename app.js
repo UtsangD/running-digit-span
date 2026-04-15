@@ -214,7 +214,6 @@
         currentItemIdx = 0;
         results = [];
         consecutiveImperfect = 0;
-        regularTrialCount = 0;
         discontinued = false;
 
         showReadyScreen();
