@@ -645,6 +645,11 @@
                 digitIntervalMs: DIGIT_INTERVAL_MS,
                 discontinueRule: `${CONSECUTIVE_IMPERFECT_TO_DISCONTINUE} consecutive imperfect`,
             },
+            survey: {
+                age: getOptionalAge('input-age'),
+                caitWmi: getOptionalStandardScore('input-cait-wmi'),
+                coreWmi: getOptionalStandardScore('input-core-wmi'),
+            },
             summary: {
                 totalRawScore: results.reduce((s, r) => s + r.correctCount, 0),
                 maxRawScore: results.reduce((s, r) => s + r.maxPoints, 0),
@@ -692,8 +697,9 @@
             return;
         }
 
-        const ageInput = $('input-age');
-        const age = ageInput ? parseInt(ageInput.value, 10) : null;
+        const age = getOptionalAge('input-age');
+        const caitWmi = getOptionalStandardScore('input-cait-wmi');
+        const coreWmi = getOptionalStandardScore('input-core-wmi');
 
         // Build per-level summary
         const levelSummary = {};
@@ -714,7 +720,9 @@
             schemaVersion: 1,
             sessionId: sessionId,
             timestamp: new Date().toISOString(),
-            age: (age && age >= 10 && age <= 100) ? age : '',
+            age: age,
+            caitWmi: caitWmi,
+            coreWmi: coreWmi,
             completed: true,
             totalTrialsExpected: allItems.length,
             totalScore: totalScore,
@@ -752,5 +760,17 @@
         el.textContent = msg;
         el.className = 'submit-status ' + type;
         el.style.display = 'block';
+    }
+
+    function getOptionalAge(inputId) {
+        const input = $(inputId);
+        const value = input ? parseInt(input.value, 10) : null;
+        return Number.isFinite(value) && value >= 10 && value <= 100 ? value : '';
+    }
+
+    function getOptionalStandardScore(inputId) {
+        const input = $(inputId);
+        const value = input ? parseInt(input.value, 10) : null;
+        return Number.isFinite(value) && value >= 1 && value <= 200 ? value : '';
     }
 })();

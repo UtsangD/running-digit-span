@@ -888,8 +888,9 @@ input[type="range"] {
     white-space: nowrap;
 }
 
-.age-input {
-    width: 90px;
+.age-input,
+.score-input {
+    width: 100px;
     background: var(--bg);
     color: var(--text);
     border: 1px solid var(--border);

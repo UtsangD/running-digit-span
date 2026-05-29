@@ -94,7 +94,7 @@ const sortedItems = questionBank
 
 const sessionHeaders = [
   'testType', 'schemaVersion',
-  'sessionId', 'timestamp', 'age', 'completed', 'totalItemsExpected',
+  'sessionId', 'timestamp', 'age', 'caitWmi', 'coreWmi', 'completed', 'totalItemsExpected',
   'totalScore', 'maxScore', 'accuracy', 'itemsCompleted',
   'meanResponseTimeMs', 'timedOutCount', 'skippedCount', 'repeatCount',
   'scaledEstimate', 'speechRate',
@@ -105,7 +105,7 @@ const sessionHeaders = [
 ];
 
 const responseHeaders = [
-  'sessionId', 'timestamp', 'age',
+  'sessionId', 'timestamp', 'age', 'caitWmi', 'coreWmi',
   'itemPosition', 'itemId', 'tier', 'tierLabel', 'concept',
   'score', 'correct', 'rawAnswer', 'correctAnswer',
   'responseTimeMs', 'responseTimeSec', 'timedOut', 'skipped', 'repeatCount',
@@ -121,47 +121,49 @@ const itemNorms = workbook.worksheets.add('Item Norms');
 const readme = workbook.worksheets.add('README');
 
 writeMatrix(dashboard, 1, 1, [
-  ['Arithmetic WAIS-style norming dashboard', '', '', '', '', '', '', ''],
-  ['Paste session rows into Sessions and item rows into Item Responses. Formulas update the dashboard and item norms.', '', '', '', '', '', '', ''],
+  ['Arithmetic WAIS-style norming dashboard', '', '', '', '', '', '', '', '', ''],
+  ['Paste session rows into Sessions and item rows into Item Responses. Formulas update the dashboard and item norms.', '', '', '', '', '', '', '', '', ''],
   [],
-  ['Sessions', '=COUNTA(Sessions!C2:C2000)', 'Mean accuracy', '=IFERROR(AVERAGE(Sessions!J2:J2000)/100,"")', 'Avg response sec', '=IFERROR(AVERAGE(Sessions!L2:L2000)/1000,"")', 'Total repeats', '=SUM(Sessions!O2:O2000)'],
+  ['Sessions', '=COUNTA(Sessions!C2:C2000)', 'Mean accuracy', '=IFERROR(AVERAGE(Sessions!L2:L2000)/100,"")', 'Avg response sec', '=IFERROR(AVERAGE(Sessions!N2:N2000)/1000,"")', 'Mean CAIT WMI', '=IFERROR(AVERAGE(Sessions!F2:F2000),"")', 'Mean CORE WMI', '=IFERROR(AVERAGE(Sessions!G2:G2000),"")'],
+  ['Total repeats', '=SUM(Sessions!Q2:Q2000)', '', '', '', '', '', '', '', ''],
   [],
   ['Tier ID', 'Tier', 'Attempts', 'Correct', 'Accuracy', 'Avg RT sec', 'Timeouts', 'Repeats'],
 ]);
-writeMatrix(dashboard, 1, 7, tiers.map((tier) => [tier.id, tier.label, '', '', '', '', '', '']));
-writeFormulas(dashboard, 3, 7, tiers.map((tier, index) => {
-  const row = 7 + index;
+writeMatrix(dashboard, 1, 8, tiers.map((tier) => [tier.id, tier.label, '', '', '', '', '', '']));
+writeFormulas(dashboard, 3, 8, tiers.map((tier, index) => {
+  const row = 8 + index;
   return [
-    `=COUNTIF('Item Responses'!F$2:F$5000,A${row})`,
-    `=SUMIF('Item Responses'!F$2:F$5000,A${row},'Item Responses'!I$2:I$5000)`,
+    `=COUNTIF('Item Responses'!H$2:H$5000,A${row})`,
+    `=SUMIF('Item Responses'!H$2:H$5000,A${row},'Item Responses'!K$2:K$5000)`,
     `=IFERROR(D${row}/C${row},"")`,
-    `=IFERROR(AVERAGEIF('Item Responses'!F$2:F$5000,A${row},'Item Responses'!N$2:N$5000),"")`,
-    `=COUNTIFS('Item Responses'!F$2:F$5000,A${row},'Item Responses'!O$2:O$5000,1)`,
-    `=SUMIF('Item Responses'!F$2:F$5000,A${row},'Item Responses'!Q$2:Q$5000)`,
+    `=IFERROR(AVERAGEIF('Item Responses'!H$2:H$5000,A${row},'Item Responses'!P$2:P$5000),"")`,
+    `=COUNTIFS('Item Responses'!H$2:H$5000,A${row},'Item Responses'!Q$2:Q$5000,1)`,
+    `=SUMIF('Item Responses'!H$2:H$5000,A${row},'Item Responses'!S$2:S$5000)`,
   ];
 }));
-dashboard.getRange('A1:H1').format = {
+dashboard.getRange('A1:J1').format = {
   fill: '#0F172A',
   font: { bold: true, color: '#FFFFFF', size: 16 },
   verticalAlignment: 'center',
 };
-dashboard.getRange('A2:H2').format = {
+dashboard.getRange('A2:J2').format = {
   fill: '#E0F2FE',
   font: { color: '#0F172A' },
   wrapText: true,
 };
-dashboard.getRange('A4:H4').format = {
+dashboard.getRange('A4:J5').format = {
   fill: '#F8FAFC',
   font: { bold: true },
   borders: { preset: 'outside', style: 'thin', color: '#CBD5E1' },
 };
-styleHeader(dashboard, 1, 6, 8);
+styleHeader(dashboard, 1, 7, 8);
 dashboard.getRange('D4:D4').format.numberFormat = '0%';
 dashboard.getRange('F4:F4').format.numberFormat = '0.0';
-dashboard.getRange('E7:E10').format.numberFormat = '0%';
-dashboard.getRange('F7:F10').format.numberFormat = '0.0';
-setColumnWidths(dashboard, [130, 120, 90, 90, 90, 95, 90, 90]);
-dashboard.freezePanes.freezeRows(6);
+dashboard.getRange('H4:J4').format.numberFormat = '0';
+dashboard.getRange('E8:E11').format.numberFormat = '0%';
+dashboard.getRange('F8:F11').format.numberFormat = '0.0';
+setColumnWidths(dashboard, [130, 120, 105, 90, 120, 95, 125, 95, 130, 95]);
+dashboard.freezePanes.freezeRows(7);
 
 writeMatrix(sessions, 1, 1, [sessionHeaders]);
 styleHeader(sessions, 1, 1, sessionHeaders.length);
@@ -221,12 +223,12 @@ writeMatrix(itemNorms, 1, 2, sortedItems.map((item) => [
 writeFormulas(itemNorms, 7, 2, sortedItems.map((item, idx) => {
   const row = idx + 2;
   return [
-    `=COUNTIF('Item Responses'!E$2:E$5000,A${row})`,
-    `=SUMIF('Item Responses'!E$2:E$5000,A${row},'Item Responses'!I$2:I$5000)`,
+    `=COUNTIF('Item Responses'!G$2:G$5000,A${row})`,
+    `=SUMIF('Item Responses'!G$2:G$5000,A${row},'Item Responses'!K$2:K$5000)`,
     `=IFERROR(H${row}/G${row},"")`,
-    `=IFERROR(AVERAGEIF('Item Responses'!E$2:E$5000,A${row},'Item Responses'!N$2:N$5000),"")`,
-    `=COUNTIFS('Item Responses'!E$2:E$5000,A${row},'Item Responses'!O$2:O$5000,1)`,
-    `=SUMIF('Item Responses'!E$2:E$5000,A${row},'Item Responses'!Q$2:Q$5000)`,
+    `=IFERROR(AVERAGEIF('Item Responses'!G$2:G$5000,A${row},'Item Responses'!P$2:P$5000),"")`,
+    `=COUNTIFS('Item Responses'!G$2:G$5000,A${row},'Item Responses'!Q$2:Q$5000,1)`,
+    `=SUMIF('Item Responses'!G$2:G$5000,A${row},'Item Responses'!S$2:S$5000)`,
   ];
 }));
 styleHeader(itemNorms, 1, 1, itemNormHeaders.length);
@@ -242,7 +244,7 @@ writeMatrix(readme, 1, 1, [
   ['How to use', 'Deploy apps_script.js to Google Apps Script, collect submissions, then paste/export the Arithmetic Sessions and Arithmetic Item Responses sheets into this workbook.'],
   ['Important caveat', 'Official WAIS item content and age-based norm tables are proprietary. This workbook uses original practice items and seed difficulty estimates only.'],
   ['Public reference notes', 'WAIS-IV Arithmetic is publicly described as a Working Memory subtest with 22 dichotomous items and a 0-22 raw score range; Pearson telepractice guidance confirms timed item administration.'],
-  ['Recommended analysis', 'Use empirical accuracy, response time, repeats, and timeouts by age band once enough local observations have been collected.'],
+  ['Recommended analysis', 'Use empirical accuracy, response time, repeats, timeouts, age band, CAIT WMI, and CORE WMI once enough local observations have been collected.'],
 ]);
 readme.getRange('A1:B1').format = {
   fill: '#0F172A',
@@ -262,10 +264,10 @@ await fs.mkdir(outputDir, { recursive: true });
 
 const dashboardInspect = await workbook.inspect({
   kind: 'table',
-  range: 'Dashboard!A1:H10',
+  range: 'Dashboard!A1:J11',
   include: 'values,formulas',
-  tableMaxRows: 10,
-  tableMaxCols: 8,
+  tableMaxRows: 11,
+  tableMaxCols: 10,
 });
 console.log(dashboardInspect.ndjson);
 

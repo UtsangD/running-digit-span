@@ -865,6 +865,11 @@
                 voice: selectedVoice ? selectedVoice.name : 'default',
                 itemSelection: TIER_CONFIG.map((tier) => `${tier.label}: ${tier.selectCount}`).join(', '),
             },
+            survey: {
+                age: getOptionalAge('arith-input-age'),
+                caitWmi: getOptionalStandardScore('arith-input-cait-wmi'),
+                coreWmi: getOptionalStandardScore('arith-input-core-wmi'),
+            },
             summary: {
                 totalScore: summary.totalScore,
                 maxScore: summary.maxScore,
@@ -917,8 +922,9 @@
             return;
         }
 
-        const ageInput = $('arith-input-age');
-        const age = ageInput ? parseInt(ageInput.value, 10) : null;
+        const age = getOptionalAge('arith-input-age');
+        const caitWmi = getOptionalStandardScore('arith-input-cait-wmi');
+        const coreWmi = getOptionalStandardScore('arith-input-core-wmi');
         const summary = getSummary();
 
         const tierSummary = {};
@@ -937,7 +943,9 @@
             schemaVersion: 1,
             sessionId: sessionId,
             timestamp: new Date().toISOString(),
-            age: (age && age >= 10 && age <= 100) ? age : '',
+            age: age,
+            caitWmi: caitWmi,
+            coreWmi: coreWmi,
             completed: results.length === allItems.length,
             totalItemsExpected: allItems.length,
             totalScore: summary.totalScore,
@@ -979,5 +987,17 @@
         el.textContent = message;
         el.className = 'submit-status ' + type;
         el.style.display = 'block';
+    }
+
+    function getOptionalAge(inputId) {
+        const input = $(inputId);
+        const value = input ? parseInt(input.value, 10) : null;
+        return Number.isFinite(value) && value >= 10 && value <= 100 ? value : '';
+    }
+
+    function getOptionalStandardScore(inputId) {
+        const input = $(inputId);
+        const value = input ? parseInt(input.value, 10) : null;
+        return Number.isFinite(value) && value >= 1 && value <= 200 ? value : '';
     }
 })();

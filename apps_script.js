@@ -49,7 +49,7 @@ function handleRunningDigitPost(data) {
 
   var headers = ensureHeaders(sheet, [
     'testType', 'schemaVersion',
-    'sessionId', 'timestamp', 'age', 'completed', 'totalTrialsExpected',
+    'sessionId', 'timestamp', 'age', 'caitWmi', 'coreWmi', 'completed', 'totalTrialsExpected',
     'totalScore', 'maxScore', 'accuracy',
     'trialsCompleted', 'discontinued', 'runningSpan', 'speechRate',
     'last_3_correct', 'last_3_max', 'last_3_pct',
@@ -71,7 +71,7 @@ function handleArithmeticPost(data) {
   var sessionsSheet = getOrCreateSheet('Arithmetic Sessions');
   var sessionHeaders = ensureHeaders(sessionsSheet, [
     'testType', 'schemaVersion',
-    'sessionId', 'timestamp', 'age', 'completed', 'totalItemsExpected',
+    'sessionId', 'timestamp', 'age', 'caitWmi', 'coreWmi', 'completed', 'totalItemsExpected',
     'totalScore', 'maxScore', 'accuracy', 'itemsCompleted',
     'meanResponseTimeMs', 'timedOutCount', 'skippedCount', 'repeatCount',
     'scaledEstimate', 'speechRate',
@@ -97,7 +97,7 @@ function appendArithmeticItems(data) {
 
   var itemSheet = getOrCreateSheet('Arithmetic Item Responses');
   var headers = ensureHeaders(itemSheet, [
-    'sessionId', 'timestamp', 'age',
+    'sessionId', 'timestamp', 'age', 'caitWmi', 'coreWmi',
     'itemPosition', 'itemId', 'tier', 'tierLabel', 'concept',
     'score', 'correct', 'rawAnswer', 'correctAnswer',
     'responseTimeMs', 'responseTimeSec', 'timedOut', 'skipped', 'repeatCount',
@@ -111,6 +111,8 @@ function appendArithmeticItems(data) {
       if (key === 'sessionId') return data.sessionId || '';
       if (key === 'timestamp') return data.timestamp || '';
       if (key === 'age') return data.age || '';
+      if (key === 'caitWmi') return data.caitWmi || '';
+      if (key === 'coreWmi') return data.coreWmi || '';
       if (key === 'responseTimeSec') {
         return item.responseTimeMs !== undefined ? item.responseTimeMs / 1000 : '';
       }
@@ -147,7 +149,20 @@ function ensureHeaders(sheet, defaultHeaders) {
   for (var i = 0; i < existing.length; i++) {
     if (existing[i] !== '') headers.push(existing[i]);
   }
-  return headers.length ? headers : defaultHeaders;
+  if (!headers.length) return defaultHeaders;
+
+  var added = false;
+  for (var j = 0; j < defaultHeaders.length; j++) {
+    if (headers.indexOf(defaultHeaders[j]) === -1) {
+      headers.push(defaultHeaders[j]);
+      sheet.getRange(1, headers.length).setValue(defaultHeaders[j]).setFontWeight('bold');
+      added = true;
+    }
+  }
+  if (added) {
+    sheet.setFrozenRows(1);
+  }
+  return headers;
 }
 
 function appendDataRow(sheet, headers, data) {
