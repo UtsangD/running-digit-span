@@ -710,6 +710,8 @@
         const maxScore = results.reduce((s, r) => s + r.maxPoints, 0);
 
         const payload = {
+            testType: 'running_digit_span',
+            schemaVersion: 1,
             sessionId: sessionId,
             timestamp: new Date().toISOString(),
             age: (age && age >= 10 && age <= 100) ? age : '',

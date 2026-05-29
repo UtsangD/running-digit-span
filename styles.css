@@ -40,7 +40,40 @@ html, body {
     display: flex;
     align-items: center;
     justify-content: center;
-    padding: 20px;
+    padding: 72px 20px 20px;
+}
+
+.app-nav {
+    position: fixed;
+    top: 14px;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 10;
+    display: flex;
+    gap: 6px;
+    padding: 6px;
+    background: rgba(26, 29, 39, 0.94);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    box-shadow: 0 10px 28px rgba(0, 0, 0, 0.22);
+    backdrop-filter: blur(10px);
+}
+
+.app-nav-link {
+    color: var(--text-dim);
+    text-decoration: none;
+    font-size: 0.86rem;
+    font-weight: 600;
+    line-height: 1;
+    padding: 9px 13px;
+    border-radius: 6px;
+    white-space: nowrap;
+}
+
+.app-nav-link:hover,
+.app-nav-link.active {
+    color: var(--text);
+    background: var(--surface-2);
 }
 
 /* === Screens === */
@@ -473,6 +506,143 @@ input[type="range"] {
     margin-top: 0;
 }
 
+/* === Arithmetic Test === */
+#arith-screen-results {
+    max-width: min(980px, calc(100vw - 40px));
+}
+
+#arith-screen-response {
+    max-width: min(680px, calc(100vw - 40px));
+}
+
+.arithmetic-response-card h2 {
+    margin-top: 18px;
+}
+
+.timer-wrap {
+    width: 100%;
+    background: var(--surface-2);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    padding: 12px 14px;
+    margin-bottom: 10px;
+}
+
+.timer-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    color: var(--text-dim);
+    font-size: 0.86rem;
+    margin-bottom: 8px;
+}
+
+.timer-row strong {
+    color: var(--text);
+    font-variant-numeric: tabular-nums;
+}
+
+.timer-track {
+    width: 100%;
+    height: 8px;
+    background: var(--border);
+    border-radius: 999px;
+    overflow: hidden;
+}
+
+.timer-fill {
+    height: 100%;
+    width: 100%;
+    background: var(--success);
+    border-radius: 999px;
+    transition: width 0.1s linear, background 0.2s ease;
+}
+
+.timer-fill.timer-low {
+    background: var(--warning);
+}
+
+.question-fallback {
+    background: rgba(224, 168, 64, 0.1);
+    border: 1px solid rgba(224, 168, 64, 0.24);
+    border-radius: var(--radius-sm);
+    color: var(--text);
+    font-size: 0.92rem;
+    line-height: 1.5;
+    padding: 12px 14px;
+    margin-bottom: 14px;
+    text-align: left;
+}
+
+.repeat-answer-grid {
+    display: grid;
+    grid-template-columns: 180px minmax(0, 1fr);
+    gap: 12px;
+    align-items: stretch;
+    margin-bottom: 14px;
+}
+
+.repeat-btn {
+    width: 100%;
+    padding-left: 14px;
+    padding-right: 14px;
+}
+
+.answer-box {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    text-align: left;
+    color: var(--text-dim);
+    font-size: 0.82rem;
+    font-weight: 600;
+}
+
+.answer-box input {
+    width: 100%;
+    min-height: 48px;
+    background: var(--surface-2);
+    color: var(--text);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    padding: 8px 12px;
+    font-size: 1.25rem;
+    font-weight: 600;
+    font-variant-numeric: tabular-nums;
+}
+
+.answer-box input:focus {
+    outline: none;
+    border-color: var(--primary);
+    box-shadow: 0 0 0 2px rgba(91, 138, 245, 0.24);
+}
+
+.item-feedback {
+    min-height: 24px;
+    font-size: 0.9rem;
+    font-weight: 600;
+    margin-bottom: 8px;
+}
+
+.item-feedback.info {
+    color: var(--primary);
+}
+
+.item-feedback.success {
+    color: var(--success);
+}
+
+.item-feedback.error {
+    color: var(--error);
+}
+
+.arithmetic-detail-table .question-cell {
+    min-width: 300px;
+    max-width: 420px;
+    white-space: normal;
+    line-height: 1.35;
+}
+
 /* === Results Screen === */
 .results-card {
     max-height: 90vh;
@@ -829,6 +999,23 @@ input[type="range"] {
 
 /* === Responsive === */
 @media (max-width: 480px) {
+    #app {
+        padding: 76px 14px 14px;
+    }
+
+    .app-nav {
+        width: calc(100vw - 28px);
+        justify-content: center;
+    }
+
+    .app-nav-link {
+        flex: 1;
+        text-align: center;
+        padding-left: 8px;
+        padding-right: 8px;
+        font-size: 0.8rem;
+    }
+
     .card {
         padding: 24px 18px;
     }
@@ -854,5 +1041,13 @@ input[type="range"] {
 
     .trial-table {
         font-size: 0.75rem;
+    }
+
+    .repeat-answer-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .arithmetic-detail-table .question-cell {
+        min-width: 220px;
     }
 }

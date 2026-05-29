@@ -1,0 +1,198 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Arithmetic - Working Memory Assessment</title>
+    <meta name="description" content="WAIS-style mental arithmetic assessment with randomized items, spoken prompts, 30-second limits, and norm collection.">
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <nav class="app-nav" aria-label="Assessment navigation">
+        <a href="index.html" class="app-nav-link">Running Digit Span</a>
+        <a href="arithmetic.html" class="app-nav-link active">Arithmetic</a>
+    </nav>
+
+    <div id="app">
+        <div id="arith-screen-welcome" class="screen active">
+            <div class="card welcome-card">
+                <h1>Arithmetic</h1>
+                <p class="subtitle">Working Memory - Mental Calculation</p>
+
+                <div class="info-box">
+                    <h3>Instructions</h3>
+                    <p>You will hear short arithmetic word problems spoken aloud. Solve each problem mentally.</p>
+                    <p>Do not use paper, a calculator, or another device. Enter only the numeric answer.</p>
+                    <p>Each item has a 30-second limit. You may repeat the question once if the audio was not clear.</p>
+                </div>
+
+                <div class="info-box">
+                    <h3>Format</h3>
+                    <p>The session uses 22 randomized items selected from easy through semi-hard tiers.</p>
+                    <p>Items are ordered from easier to harder, but the exact questions vary by session.</p>
+                    <p>This is a WAIS-inspired practice/norming task, not an official WAIS administration.</p>
+                </div>
+
+                <div class="settings-row">
+                    <label for="arith-voice-select">Voice:</label>
+                    <select id="arith-voice-select"></select>
+                </div>
+                <div class="settings-row">
+                    <label for="arith-voice-rate">Rate:</label>
+                    <input type="range" id="arith-voice-rate" min="0.7" max="1.15" step="0.05" value="0.95">
+                    <span id="arith-voice-rate-label">0.95x</span>
+                </div>
+                <div class="settings-row">
+                    <label for="arith-chk-feedback">Feedback:</label>
+                    <label class="toggle-label">
+                        <input type="checkbox" id="arith-chk-feedback" checked>
+                        <span>Show correct/incorrect after each item</span>
+                    </label>
+                </div>
+
+                <button id="arith-btn-start" class="btn btn-primary">Begin Arithmetic Test</button>
+                <p class="note">Turn your volume on. Question text is hidden during normal testing to preserve the working-memory load.</p>
+            </div>
+        </div>
+
+        <div id="arith-screen-ready" class="screen">
+            <div class="card stimulus-card">
+                <p class="trial-counter">Item <span id="arith-ready-item-num"></span> of <span id="arith-ready-item-total"></span></p>
+                <p id="arith-ready-tier-info" class="level-info"></p>
+                <p class="ready-prompt">Press <strong>Start</strong> when you are ready to hear the problem.</p>
+                <button id="arith-btn-go" class="btn btn-primary">Start</button>
+            </div>
+        </div>
+
+        <div id="arith-screen-stimulus" class="screen">
+            <div class="card stimulus-card">
+                <div class="listening-indicator">
+                    <div class="pulse-ring"></div>
+                    <div class="pulse-ring delay-1"></div>
+                    <div class="pulse-ring delay-2"></div>
+                    <div class="speaker-icon">
+                        <svg viewBox="0 0 24 24" width="36" height="36" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                            <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon>
+                            <path d="M19.07 4.93a10 10 0 0 1 0 14.14"></path>
+                            <path d="M15.54 8.46a5 5 0 0 1 0 7.07"></path>
+                        </svg>
+                    </div>
+                </div>
+                <div id="arith-listening-label" class="listening-label">Listen...</div>
+            </div>
+        </div>
+
+        <div id="arith-screen-response" class="screen">
+            <div class="card response-card arithmetic-response-card">
+                <p class="trial-counter">Item <span id="arith-response-item-num"></span> of <span id="arith-response-item-total"></span></p>
+                <div class="timer-wrap" aria-live="polite">
+                    <div class="timer-row">
+                        <span>Time left</span>
+                        <strong><span id="arith-time-left">30</span>s</strong>
+                    </div>
+                    <div class="timer-track">
+                        <div id="arith-timer-fill" class="timer-fill"></div>
+                    </div>
+                </div>
+
+                <h2>Enter your answer</h2>
+                <p id="arith-response-hint" class="response-hint">Numeric answer only. Decimals are allowed when needed.</p>
+                <p id="arith-question-fallback" class="question-fallback" hidden></p>
+
+                <div class="repeat-answer-grid">
+                    <button id="arith-btn-repeat" class="btn btn-secondary repeat-btn" type="button">Repeat Question</button>
+                    <label class="answer-box">
+                        <span>Answer</span>
+                        <input id="arith-answer" type="text" inputmode="decimal" autocomplete="off" placeholder="e.g. 14">
+                    </label>
+                </div>
+
+                <p id="arith-feedback" class="item-feedback" aria-live="polite"></p>
+
+                <div class="response-actions">
+                    <button id="arith-btn-submit" class="btn btn-primary">Submit</button>
+                    <button id="arith-btn-skip" class="btn btn-secondary">Don't Know</button>
+                </div>
+            </div>
+        </div>
+
+        <div id="arith-screen-results" class="screen">
+            <div class="card results-card arithmetic-results-card">
+                <h1>Arithmetic Complete</h1>
+
+                <div class="iq-hero">
+                    <span class="iq-label">Arithmetic - Draft Baseline Estimate</span>
+                    <span id="arith-result-scaled" class="iq-score"></span>
+                    <span id="arith-result-classification" class="iq-classification"></span>
+                    <span id="arith-result-percentile" class="iq-percentile"></span>
+                </div>
+
+                <div class="results-summary">
+                    <div class="result-item">
+                        <span class="result-label">Raw Score</span>
+                        <span id="arith-result-total" class="result-value big"></span>
+                    </div>
+                    <div class="result-item">
+                        <span class="result-label">Accuracy</span>
+                        <span id="arith-result-accuracy" class="result-value big"></span>
+                    </div>
+                    <div class="result-item">
+                        <span class="result-label">Avg Time</span>
+                        <span id="arith-result-avg-time" class="result-value"></span>
+                    </div>
+                    <div class="result-item">
+                        <span class="result-label">Repeats</span>
+                        <span id="arith-result-repeats" class="result-value"></span>
+                    </div>
+                </div>
+
+                <h3>Accuracy by Tier</h3>
+                <div id="arith-results-by-tier" class="results-by-block"></div>
+
+                <h3>Item Detail</h3>
+                <div id="arith-results-item-detail" class="trial-detail-table-wrap"></div>
+
+                <div class="norm-table">
+                    <h3>Scoring &amp; Norms Reference</h3>
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Metric</th>
+                                <th>Value</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr><td>Items</td><td>22 randomized mental arithmetic items</td></tr>
+                            <tr><td>Scoring</td><td>1 point for each exact numeric answer</td></tr>
+                            <tr><td>Time limit</td><td>30 seconds per item</td></tr>
+                            <tr><td>Item norms</td><td>Public item-level WAIS norms were not available; this app records item ID, timing, repeats, and correctness for local norm building.</td></tr>
+                        </tbody>
+                    </table>
+                    <p class="norm-note">
+                        Public references confirm WAIS-IV Arithmetic is a 22-item Working Memory subtest with raw scores from 0 to 22 and timed item administration.
+                        Official item content and age norms are proprietary, so the estimate above is only a draft baseline until enough app data is collected.
+                    </p>
+                </div>
+
+                <div class="norm-submit-section">
+                    <h3>Help Build Norms</h3>
+                    <p class="norm-submit-desc">Submit your results anonymously to help build item-level norms. No personally identifiable information is collected.</p>
+                    <div class="norm-submit-row">
+                        <label for="arith-input-age">Age (optional):</label>
+                        <input type="number" id="arith-input-age" min="10" max="100" placeholder="e.g. 25" class="age-input">
+                    </div>
+                    <button id="arith-btn-submit-norms" class="btn btn-success">Submit Results Anonymously</button>
+                    <div id="arith-submit-status" class="submit-status" style="display:none"></div>
+                </div>
+
+                <div class="results-actions">
+                    <button id="arith-btn-restart" class="btn btn-primary">Retake Test</button>
+                    <button id="arith-btn-export" class="btn btn-secondary">Export Results</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="arithmetic.js"></script>
+</body>
+</html>
