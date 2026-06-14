@@ -45,7 +45,7 @@
     let consecutiveImperfect = 0;
     let discontinued = false;
     let selectedVoice = null;
-    let speechRate = 0.9;
+    let speechRate = 1.0;
     let stimulusTimeout = null;
     let showAnswerFeedback = true;
     let sessionId = null;
