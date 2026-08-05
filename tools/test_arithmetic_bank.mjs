@@ -5,12 +5,18 @@ import vm from 'node:vm';
 
 const repoRoot = process.cwd();
 const source = await fs.readFile(path.join(repoRoot, 'arithmetic_bank.js'), 'utf8');
+const scoringSource = await fs.readFile(path.join(repoRoot, 'arithmetic_scoring.js'), 'utf8');
+const appsScriptSource = await fs.readFile(path.join(repoRoot, 'apps_script.js'), 'utf8');
+const workbookBuilderSource = await fs.readFile(path.join(repoRoot, 'tools', 'build_arithmetic_norm_workbook.mjs'), 'utf8');
 const context = {};
 vm.createContext(context);
 vm.runInContext(source, context, { filename: 'arithmetic_bank.js' });
+vm.runInContext(scoringSource, context, { filename: 'arithmetic_scoring.js' });
 
 const bankApi = context.ArithmeticBank;
 assert.ok(bankApi, 'ArithmeticBank must load');
+const scoringApi = context.ArithmeticScoring;
+assert.ok(scoringApi, 'ArithmeticScoring must load');
 
 const bank = bankApi.createItemBank();
 assert.equal(bank.length, 960, 'bank must contain 960 stable items');
@@ -34,6 +40,35 @@ for (const item of bank) {
     assert.ok(item.answer <= 100, `${item.id} requires an impossible test score`);
   }
 }
+
+const estimates = Array.from({ length: 23 }, (_, rawScore) => scoringApi.estimateIqEquivalent(rawScore));
+assert.equal(estimates[0].iqEstimate, 55, 'raw 0 must use the lower IQ display bound');
+assert.equal(estimates[15].iqEstimate, 100, 'raw 15 must map to the provisional mean');
+assert.equal(estimates[15].percentileEstimate, 50, 'the provisional mean must map to the 50th percentile');
+assert.equal(estimates[22].iqEstimate, 130, 'raw 22 must map to IQ-equivalent 130');
+assert.equal(scoringApi.formatPercentile(estimates[15].percentileEstimate), '50th percentile');
+for (let index = 1; index < estimates.length; index++) {
+  assert.ok(estimates[index].iqEstimate >= estimates[index - 1].iqEstimate, 'IQ estimates must be monotonic');
+  assert.ok(estimates[index].percentileEstimate >= estimates[index - 1].percentileEstimate, 'percentiles must be monotonic');
+}
+
+function extractSingleQuotedValues(sourceText, pattern, label) {
+  const match = sourceText.match(pattern);
+  assert.ok(match, `${label} header block must exist`);
+  return Array.from(match[1].matchAll(/'([^']+)'/g), (headerMatch) => headerMatch[1]);
+}
+
+const appsScriptSessionHeaders = extractSingleQuotedValues(
+  appsScriptSource,
+  /function handleArithmeticPost[\s\S]*?var sessionHeaders = ensureHeaders\(sessionsSheet, \[([\s\S]*?)\]\);/,
+  'Apps Script arithmetic session',
+);
+const workbookSessionHeaders = extractSingleQuotedValues(
+  workbookBuilderSource,
+  /const sessionHeaders = \[([\s\S]*?)\];/,
+  'workbook arithmetic session',
+);
+assert.deepEqual(appsScriptSessionHeaders, workbookSessionHeaders, 'Apps Script and workbook session schemas must match');
 
 function seededRandom(seed) {
   let state = seed >>> 0;
@@ -66,4 +101,4 @@ for (let sessionNumber = 1; sessionNumber <= 30; sessionNumber++) {
   exposure = bankApi.recordExposure(exposure, items);
 }
 
-console.log('Arithmetic bank checks passed: 960 items, 80 models, 30 retakes without exact-item overlap.');
+console.log('Arithmetic checks passed: scoring model, 960 items, 80 models, and 30 retakes without exact-item overlap.');

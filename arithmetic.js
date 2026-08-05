@@ -19,6 +19,10 @@
     if (!bankApi) {
         throw new Error('Arithmetic item bank failed to load.');
     }
+    const scoringApi = window.ArithmeticScoring;
+    if (!scoringApi) {
+        throw new Error('Arithmetic scoring model failed to load.');
+    }
     const TIER_CONFIG = bankApi.TIER_CONFIG;
     const BANK_SUMMARY = bankApi.getBankSummary();
     const EXPOSURE_STORAGE_KEY = `arithmetic-exposure-${bankApi.BANK_VERSION}`;
@@ -767,6 +771,7 @@
         const repeats = results.reduce((sum, result) => sum + result.repeatCount, 0);
         const timedOutCount = results.filter((result) => result.timedOut).length;
         const skippedCount = results.filter((result) => result.skipped).length;
+        const estimate = scoringApi.estimateIqEquivalent(totalScore);
 
         return {
             totalScore,
@@ -776,16 +781,17 @@
             repeatCount: repeats,
             timedOutCount,
             skippedCount,
-            scoreStatus: 'uncalibrated',
+            scoreStatus: 'provisional_uncalibrated',
+            ...estimate,
         };
     }
 
     function showResults() {
         const summary = getSummary();
 
-        $('arith-result-scaled').textContent = `${summary.totalScore} / ${summary.maxScore}`;
-        $('arith-result-classification').textContent = 'Local calibration pending';
-        $('arith-result-percentile').textContent = 'No IQ or percentile reported';
+        $('arith-result-iq').textContent = String(summary.iqEstimate);
+        $('arith-result-classification').textContent = `${summary.estimateClassification} - uncalibrated estimate`;
+        $('arith-result-percentile').textContent = scoringApi.formatPercentile(summary.percentileEstimate);
         $('arith-result-total').textContent = `${summary.totalScore} / ${summary.maxScore}`;
         $('arith-result-accuracy').textContent = Math.round(summary.accuracy * 100) + '%';
         $('arith-result-avg-time').textContent = (summary.meanResponseTimeMs / 1000).toFixed(1) + 's';
@@ -859,7 +865,7 @@
         return {
             testType: 'arithmetic_wais_style',
             testName: 'Arithmetic (WAIS-inspired)',
-            schemaVersion: 2,
+            schemaVersion: 3,
             participantId: participantId,
             sessionId: sessionId,
             timestamp: new Date().toISOString(),
@@ -892,6 +898,12 @@
                 timedOutCount: summary.timedOutCount,
                 skippedCount: summary.skippedCount,
                 scoreStatus: summary.scoreStatus,
+                iqEstimate: summary.iqEstimate,
+                percentileEstimate: summary.percentileEstimate,
+                estimateClassification: summary.estimateClassification,
+                estimateModel: summary.estimateModel,
+                estimateMeanRaw: summary.estimateMeanRaw,
+                estimateRawSd: summary.estimateRawSd,
             },
             items: results.map((result) => ({
                 itemPosition: result.itemPosition,
@@ -956,7 +968,7 @@
 
         const payload = {
             testType: 'arithmetic_wais_style',
-            schemaVersion: 2,
+            schemaVersion: 3,
             participantId: participantId,
             sessionId: sessionId,
             timestamp: new Date().toISOString(),
@@ -967,6 +979,12 @@
             selectionMethod: 'least-exposed model and item with randomized tie breaks',
             priorSessionsTracked: priorSessionsTracked,
             scoreStatus: summary.scoreStatus,
+            iqEstimate: summary.iqEstimate,
+            percentileEstimate: summary.percentileEstimate,
+            estimateClassification: summary.estimateClassification,
+            estimateModel: summary.estimateModel,
+            estimateMeanRaw: summary.estimateMeanRaw,
+            estimateRawSd: summary.estimateRawSd,
             age: age,
             caitWmi: caitWmi,
             coreWmi: coreWmi,

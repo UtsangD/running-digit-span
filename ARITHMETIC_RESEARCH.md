@@ -82,6 +82,8 @@ The participant ID is random and stored only in the browser. It is not a guarant
 ## Reporting Rules Before Norms Are Ready
 
 - Report raw correct out of 22, accuracy, average response time, repeats, and tier accuracy.
-- Mark the score as uncalibrated.
-- Do not display an IQ, WAIS-equivalent scaled score, percentile, or clinical classification.
+- Treat the raw score as the primary result.
+- The product-requested provisional display uses raw-score mean 15 and SD 3.5, then transforms that z score to an IQ-equivalent scale with mean 100 and SD 15. Its percentile is the corresponding standard-normal percentile.
+- Mark the estimate and classification as uncalibrated, store the model ID and assumptions with each session, and revise them when representative local data are available.
+- Do not present the estimate as an official WAIS score, an age-adjusted norm, Full Scale IQ, Working Memory Index, or a clinical classification.
 - Publish sample size, recruitment source, age-band counts, exclusions, missingness, and uncertainty with any future norms.

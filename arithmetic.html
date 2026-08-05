@@ -121,8 +121,8 @@
                 <h1>Arithmetic Complete</h1>
 
                 <div class="iq-hero">
-                    <span class="iq-label">Arithmetic - Experimental Raw Performance</span>
-                    <span id="arith-result-scaled" class="iq-score"></span>
+                    <span class="iq-label">Arithmetic - Experimental IQ-Equivalent Estimate</span>
+                    <span id="arith-result-iq" class="iq-score"></span>
                     <span id="arith-result-classification" class="iq-classification"></span>
                     <span id="arith-result-percentile" class="iq-percentile"></span>
                 </div>
@@ -165,12 +165,14 @@
                             <tr><td>Items</td><td>22 randomized questions drawn from 960 stable original items</td></tr>
                             <tr><td>Scoring</td><td>1 point for each exact numeric answer</td></tr>
                             <tr><td>Time limit</td><td>30 seconds per item</td></tr>
+                            <tr><td>Draft estimate</td><td>Raw-score mean 15 and SD 3.5, transformed to an IQ-equivalent scale with mean 100 and SD 15</td></tr>
                             <tr><td>Item norms</td><td>Public item-level WAIS norms were not available; this app records item ID, timing, repeats, and correctness for local norm building.</td></tr>
                         </tbody>
                     </table>
                     <p class="norm-note">
                         WAIS-IV publicly used 22 dichotomous Arithmetic items; WAIS-5 score entry allows a 0-25 Arithmetic raw score and places Arithmetic with fluid-reasoning measures.
-                        This original 22-item form is not score-equivalent to either edition. An IQ, scaled score, or percentile will not be reported until representative local calibration data exist.
+                        The IQ-equivalent and percentile above are provisional, are not age-adjusted, and are not an official WAIS, Full Scale IQ, or Working Memory Index score.
+                        They will be recalibrated when representative local data are available.
                     </p>
                 </div>
 
@@ -202,6 +204,7 @@
     </div>
 
     <script src="arithmetic_bank.js"></script>
+    <script src="arithmetic_scoring.js"></script>
     <script src="arithmetic.js"></script>
 </body>
 </html>

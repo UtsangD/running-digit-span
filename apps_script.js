@@ -80,7 +80,9 @@ function handleArithmeticPost(data) {
     'medium_correct', 'medium_max', 'medium_pct',
     'semi_hard_correct', 'semi_hard_max', 'semi_hard_pct',
     'participantId', 'bankVersion', 'bankItemCount', 'bankModelCount', 'variantsPerModel',
-    'selectionMethod', 'priorSessionsTracked', 'scoreStatus'
+    'selectionMethod', 'priorSessionsTracked', 'scoreStatus',
+    'iqEstimate', 'percentileEstimate', 'estimateClassification', 'estimateModel',
+    'estimateMeanRaw', 'estimateRawSd'
   ]);
 
   if (isDuplicateSession(sessionsSheet, sessionHeaders, data.sessionId)) {

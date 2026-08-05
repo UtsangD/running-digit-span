@@ -76,14 +76,19 @@ function setColumnWidths(sheet, widths) {
 }
 
 const bankSource = await fs.readFile(path.join(repoRoot, 'arithmetic_bank.js'), 'utf8');
+const scoringSource = await fs.readFile(path.join(repoRoot, 'arithmetic_scoring.js'), 'utf8');
 const context = {};
 vm.createContext(context);
 vm.runInContext(bankSource, context, { filename: 'arithmetic_bank.js' });
+vm.runInContext(scoringSource, context, { filename: 'arithmetic_scoring.js' });
 const bankApi = context.ArithmeticBank;
 if (!bankApi) throw new Error('Could not load ArithmeticBank from arithmetic_bank.js');
+const scoringApi = context.ArithmeticScoring;
+if (!scoringApi) throw new Error('Could not load ArithmeticScoring from arithmetic_scoring.js');
 
 const tiers = bankApi.TIER_CONFIG.map((tier) => ({ ...tier }));
 const bankSummary = bankApi.getBankSummary();
+const provisionalEstimateModel = scoringApi.MODEL;
 const itemBank = bankApi.createItemBank().sort((a, b) => {
   const tierDiff = tiers.findIndex((tier) => tier.id === a.tier) - tiers.findIndex((tier) => tier.id === b.tier);
   return tierDiff || a.difficultyOrder - b.difficultyOrder || a.id.localeCompare(b.id);
@@ -110,7 +115,8 @@ const sessionHeaders = [
   'easy_max', 'easy_pct', 'medium_correct', 'medium_max', 'medium_pct',
   'semi_hard_correct', 'semi_hard_max', 'semi_hard_pct', 'participantId', 'bankVersion',
   'bankItemCount', 'bankModelCount', 'variantsPerModel', 'selectionMethod',
-  'priorSessionsTracked', 'scoreStatus',
+  'priorSessionsTracked', 'scoreStatus', 'iqEstimate', 'percentileEstimate',
+  'estimateClassification', 'estimateModel', 'estimateMeanRaw', 'estimateRawSd',
 ];
 
 const responseHeaders = [
@@ -150,15 +156,16 @@ const modelNorms = workbook.worksheets.add('Model Norms');
 const itemsSheet = workbook.worksheets.add('Item Bank');
 const itemNorms = workbook.worksheets.add('Item Norms');
 const ageNorms = workbook.worksheets.add('Age Norm Readiness');
+const scoringModel = workbook.worksheets.add('Scoring Model');
 const sourcesSheet = workbook.worksheets.add('Sources');
 const readme = workbook.worksheets.add('README');
 
 writeMatrix(dashboard, 1, 1, [
   ['Arithmetic calibration dashboard', '', '', '', '', '', '', '', '', ''],
-  [`Bank ${bankSummary.bankVersion}: ${bankSummary.itemCount} stable items from ${bankSummary.modelCount} models. Scores remain uncalibrated until representative data are collected.`, '', '', '', '', '', '', '', '', ''],
+  [`Bank ${bankSummary.bankVersion}: ${bankSummary.itemCount} stable items from ${bankSummary.modelCount} models. Raw scores are primary; IQ-equivalent estimates remain uncalibrated until representative data are collected.`, '', '', '', '', '', '', '', '', ''],
   [],
   ['Submitted sessions', '=COUNTA(Sessions!C2:C10000)', 'Mean raw score', '=IFERROR(AVERAGE(Sessions!J2:J10000),"")', 'Mean accuracy', '=IFERROR(AVERAGE(Sessions!L2:L10000)/100,"")', 'Mean CAIT WMI', '=IFERROR(AVERAGE(Sessions!F2:F10000),"")', 'Mean CORE WMI', '=IFERROR(AVERAGE(Sessions!G2:G10000),"")'],
-  ['Total item responses', "=COUNTA('Item Responses'!G2:G5000)", 'Mean response sec', "=IFERROR(AVERAGE('Item Responses'!P2:P5000),\"\")", 'Total repeats', '=SUM(Sessions!Q2:Q10000)', 'Total timeouts', '=SUM(Sessions!O2:O10000)', 'Uncalibrated sessions', '=COUNTIF(Sessions!AM2:AM10000,"uncalibrated")'],
+  ['Total item responses', "=COUNTA('Item Responses'!G2:G5000)", 'Mean response sec', "=IFERROR(AVERAGE('Item Responses'!P2:P5000),\"\")", 'Total repeats', '=SUM(Sessions!Q2:Q10000)', 'Total timeouts', '=SUM(Sessions!O2:O10000)', 'Provisional estimates', '=COUNTIF(Sessions!AM2:AM10000,"provisional_uncalibrated")'],
   [],
   ['Tier ID', 'Tier', 'Models', 'Bank items', 'Attempts', 'Correct', 'Empirical accuracy', 'Avg RT sec', 'Timeouts', 'Repeats'],
 ]);
@@ -332,6 +339,47 @@ ageNorms.getRange('2:2').format.rowHeightPx = 44;
 setColumnWidths(ageNorms, [105, 80, 80, 120, 130, 90, 95, 95, 120, 135, 120, 125, 165, 220]);
 ageNorms.freezePanes.freezeRows(4);
 
+writeMatrix(scoringModel, 1, 1, [
+  ['Provisional raw-score estimate model', '', '', '', '', '', '', ''],
+  ['Research display only. This model is not age-adjusted, WAIS-equivalent, or a Full Scale IQ / Working Memory Index score. Replace these assumptions after representative calibration.', '', '', '', '', '', '', ''],
+]);
+writeMatrix(scoringModel, 1, 4, [
+  ['Assumption', 'Value'],
+  ['Model ID', provisionalEstimateModel.id],
+  ['Raw-score mean', provisionalEstimateModel.meanRaw],
+  ['Raw-score SD', provisionalEstimateModel.rawSd],
+  ['IQ-equivalent mean', provisionalEstimateModel.iqMean],
+  ['IQ-equivalent SD', provisionalEstimateModel.iqSd],
+  ['Minimum displayed IQ', provisionalEstimateModel.minIq],
+  ['Maximum displayed IQ', provisionalEstimateModel.maxIq],
+]);
+writeMatrix(scoringModel, 4, 4, [
+  ['Raw score', 'z score', 'IQ estimate', 'Percentile', 'Classification'],
+]);
+writeMatrix(scoringModel, 4, 5, Array.from({ length: 23 }, (_, rawScore) => [rawScore]));
+writeFormulas(scoringModel, 5, 5, Array.from({ length: 23 }, (_, index) => {
+  const row = index + 5;
+  return [
+    `=(D${row}-$B$6)/$B$7`,
+    `=MAX($B$10,MIN($B$11,ROUND($B$8+E${row}*$B$9,0)))`,
+    `=MAX(0.001,MIN(0.999,NORM.S.DIST(E${row},TRUE)))`,
+    `=IF(F${row}>=130,"Very High",IF(F${row}>=120,"High",IF(F${row}>=110,"High Average",IF(F${row}>=90,"Average",IF(F${row}>=80,"Low Average",IF(F${row}>=70,"Low","Very Low"))))))`,
+  ];
+}));
+scoringModel.getRange('A1:H1').merge();
+scoringModel.getRange('A2:H2').merge();
+styleTitle(scoringModel, 'A1:H1');
+scoringModel.getRange('A2:H2').format = { fill: '#FFF4D6', font: { color: '#5C4513' }, wrapText: true };
+styleHeader(scoringModel, 1, 4, 2);
+styleHeader(scoringModel, 4, 4, 5);
+scoringModel.getRange('E5:E27').format.numberFormat = '0.00';
+scoringModel.getRange('F5:F27').format.numberFormat = '0';
+scoringModel.getRange('G5:G27').format.numberFormat = '0.0%';
+scoringModel.getRange('1:1').format.rowHeightPx = 34;
+scoringModel.getRange('2:2').format.rowHeightPx = 48;
+setColumnWidths(scoringModel, [180, 140, 30, 90, 90, 100, 100, 125]);
+scoringModel.freezePanes.freezeRows(4);
+
 writeMatrix(sourcesSheet, 1, 1, [
   ['Public evidence used for design and norm planning', '', ''],
   ['Topic', 'Evidence used', 'Source URL'],
@@ -348,7 +396,8 @@ writeMatrix(readme, 1, 1, [
   ['Purpose', 'Collect and audit anonymous session and item-response data for this original 22-item mental-arithmetic assessment.'],
   ['Bank', `${bankSummary.itemCount} deterministic items from ${bankSummary.modelCount} item models; ${bankSummary.variantsPerModel} variants per model; bank version ${bankSummary.bankVersion}.`],
   ['Import', 'Deploy apps_script.js, then paste/export Arithmetic Sessions into Sessions and Arithmetic Item Responses into Item Responses. Keep the header names unchanged.'],
-  ['Current score status', 'Uncalibrated. Report raw score, accuracy, timing, repeats, and tier performance only. Do not report IQ, WAIS-equivalent scaled scores, percentiles, or clinical classifications.'],
+  ['Current score status', 'Raw score is primary. The app also displays a provisional IQ-equivalent estimate and normal-curve percentile using model raw-z-v1; both are explicitly uncalibrated.'],
+  ['Estimate fields', 'iqEstimate, percentileEstimate, estimateClassification, estimateModel, estimateMeanRaw, and estimateRawSd are appended to Sessions for analysis without changing legacy column positions.'],
   ['Why WAIS norms are not used', 'Official item wording and age conversion tables are proprietary, and this bank has different content and item parameters. A WAIS conversion would not be valid for these forms.'],
   ['First analysis unit', 'Use Item Models and Model Norms first. Generated variants share structure, so treating all variants as independent can understate uncertainty.'],
   ['Pilot thresholds', '50 responses per model for basic review; 100 per model for a calibration candidate. These are workflow gates, not claims of norm quality.'],
@@ -359,12 +408,12 @@ writeMatrix(readme, 1, 1, [
 ]);
 readme.getRange('A1:B1').merge();
 styleTitle(readme, 'A1:B1');
-readme.getRange('A2:A12').format = { fill: '#E8F1F8', font: { bold: true, color: '#172033' } };
+readme.getRange('A2:A13').format = { fill: '#E8F1F8', font: { bold: true, color: '#172033' } };
 setColumnWidths(readme, [190, 800]);
 
 const sheetNames = [
   'Dashboard', 'Sessions', 'Item Responses', 'Item Models', 'Model Norms', 'Item Bank',
-  'Item Norms', 'Age Norm Readiness', 'Sources', 'README',
+  'Item Norms', 'Age Norm Readiness', 'Scoring Model', 'Sources', 'README',
 ];
 for (const sheetName of sheetNames) {
   styleUsedRange(workbook.worksheets.getItem(sheetName));
@@ -377,6 +426,7 @@ for (const request of [
   { range: 'Dashboard!A1:J11', label: 'dashboard' },
   { range: 'Item Models!A1:J12', label: 'models' },
   { range: 'Age Norm Readiness!A1:N17', label: 'age-readiness' },
+  { range: 'Scoring Model!A1:H27', label: 'scoring-model' },
   { range: 'Sources!A1:C11', label: 'sources' },
 ]) {
   const inspection = await workbook.inspect({
@@ -399,15 +449,16 @@ console.log(errors.ndjson);
 
 const renderRanges = {
   Dashboard: 'A1:J11',
-  Sessions: 'A1:N8',
+  Sessions: 'AF1:AS8',
   'Item Responses': 'A1:N8',
   'Item Models': 'A1:J18',
   'Model Norms': 'A1:O18',
   'Item Bank': 'A1:N18',
   'Item Norms': 'A1:L20',
   'Age Norm Readiness': 'A1:N17',
+  'Scoring Model': 'A1:H27',
   Sources: 'A1:C11',
-  README: 'A1:B12',
+  README: 'A1:B13',
 };
 for (const sheetName of sheetNames) {
   const rendered = await workbook.render({ sheetName, range: renderRanges[sheetName], scale: 1 });
