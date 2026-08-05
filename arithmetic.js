@@ -1,11 +1,11 @@
 // ============================================================
 // Arithmetic Test - WAIS-inspired mental calculation task
 // ============================================================
-// Public sources confirm WAIS-IV Arithmetic is a 22-item,
-// timed, orally administered Working Memory subtest. Official
-// WAIS item text and age norms are proprietary, so this file uses
-// original practice items and records item-level data for local
-// norm building.
+// Public sources describe WAIS-IV Arithmetic as 22 timed,
+// orally administered items and WAIS-5 Arithmetic as a 0-25
+// raw-score secondary Fluid Reasoning measure. Official item text
+// and age norms are proprietary. This app administers original,
+// versioned items and records model-level data for local calibration.
 // ============================================================
 
 (function () {
@@ -15,14 +15,18 @@
     const TIME_LIMIT_MS = 30000;
     const MAX_REPEATS = 1;
 
-    const TIER_CONFIG = [
-        { id: 'very_easy', label: 'Very Easy', selectCount: 4, seedAccuracy: 0.95, seedMedianSeconds: 7 },
-        { id: 'easy', label: 'Easy', selectCount: 6, seedAccuracy: 0.86, seedMedianSeconds: 11 },
-        { id: 'medium', label: 'Medium', selectCount: 8, seedAccuracy: 0.72, seedMedianSeconds: 17 },
-        { id: 'semi_hard', label: 'Semi-Hard', selectCount: 4, seedAccuracy: 0.58, seedMedianSeconds: 24 },
-    ];
+    const bankApi = window.ArithmeticBank;
+    if (!bankApi) {
+        throw new Error('Arithmetic item bank failed to load.');
+    }
+    const TIER_CONFIG = bankApi.TIER_CONFIG;
+    const BANK_SUMMARY = bankApi.getBankSummary();
+    const EXPOSURE_STORAGE_KEY = `arithmetic-exposure-${bankApi.BANK_VERSION}`;
+    const PARTICIPANT_STORAGE_KEY = 'arithmetic-anonymous-participant-v1';
 
-    const QUESTION_BANK = [
+    // Retained only to identify results created by the original 40-item bank.
+    // New sessions use the versioned model bank in arithmetic_bank.js.
+    const LEGACY_QUESTION_BANK = [
         {
             id: 'AR-VE-01',
             tier: 'very_easy',
@@ -313,7 +317,7 @@
     let results = [];
     let sessionId = null;
     let selectedVoice = null;
-    let speechRate = 0.95;
+    let speechRate = 1.0;
     let voiceList = [];
     let showAnswerFeedback = true;
     let timerInterval = null;
@@ -321,6 +325,8 @@
     let responseDeadlineMs = 0;
     let submitted = false;
     let repeatsUsed = 0;
+    let priorSessionsTracked = 0;
+    let participantId = '';
 
     const $ = (id) => document.getElementById(id);
 
@@ -343,6 +349,20 @@
         ) + '-' + Date.now().toString(36);
     }
 
+    function getAnonymousParticipantId() {
+        try {
+            const existing = localStorage.getItem(PARTICIPANT_STORAGE_KEY);
+            if (existing) return existing;
+            const generated = 'arith-user-xxxx-xxxx-xxxx'.replace(/x/g, () =>
+                Math.floor(Math.random() * 16).toString(16)
+            );
+            localStorage.setItem(PARTICIPANT_STORAGE_KEY, generated);
+            return generated;
+        } catch (_) {
+            return 'storage-unavailable';
+        }
+    }
+
     function showScreen(name) {
         Object.values(screens).forEach((screen) => screen.classList.remove('active'));
         screens[name].classList.add('active');
@@ -352,27 +372,25 @@
         return TIER_CONFIG.find((tier) => tier.id === tierId);
     }
 
-    function shuffle(items) {
-        const out = [...items];
-        for (let i = out.length - 1; i > 0; i--) {
-            const j = Math.floor(Math.random() * (i + 1));
-            [out[i], out[j]] = [out[j], out[i]];
+    function loadExposureState() {
+        try {
+            return bankApi.normalizeExposureState(JSON.parse(localStorage.getItem(EXPOSURE_STORAGE_KEY)));
+        } catch (_) {
+            return bankApi.createExposureState();
         }
-        return out;
     }
 
     function buildSessionItems() {
-        const selected = [];
-        TIER_CONFIG.forEach((tier) => {
-            const tierItems = QUESTION_BANK.filter((item) => item.tier === tier.id);
-            selected.push(...shuffle(tierItems).slice(0, tier.selectCount));
-        });
-        return selected.slice(0, ITEM_COUNT).map((item, idx) => ({
-            ...item,
-            position: idx + 1,
-            seedAccuracy: getTierConfig(item.tier).seedAccuracy,
-            seedMedianSeconds: getTierConfig(item.tier).seedMedianSeconds,
-        }));
+        const exposure = loadExposureState();
+        priorSessionsTracked = exposure.sessions;
+        const selected = bankApi.selectSessionItems(exposure, Math.random).slice(0, ITEM_COUNT);
+        const updatedExposure = bankApi.recordExposure(exposure, selected);
+        try {
+            localStorage.setItem(EXPOSURE_STORAGE_KEY, JSON.stringify(updatedExposure));
+        } catch (_) {
+            // Private browsing can disable storage; random selection still works.
+        }
+        return selected;
     }
 
     function populateVoices() {
@@ -450,13 +468,37 @@
             try {
                 synth.cancel();
                 const utter = new SpeechSynthesisUtterance(text);
+                const wordCount = text.trim().split(/\s+/).length;
+                const maxSpeechMs = Math.min(20000, Math.max(7000, wordCount * 650));
+                let settled = false;
+                let started = false;
+                let startTimer = null;
+                let maxTimer = null;
+
+                const finish = (spoke) => {
+                    if (settled) return;
+                    settled = true;
+                    clearTimeout(startTimer);
+                    clearTimeout(maxTimer);
+                    if (!spoke) synth.cancel();
+                    resolve(spoke);
+                };
+
                 if (selectedVoice) utter.voice = selectedVoice;
                 utter.rate = speechRate;
                 utter.pitch = 1;
                 utter.volume = 1;
-                utter.onend = () => resolve(true);
-                utter.onerror = () => resolve(false);
+                utter.onstart = () => { started = true; };
+                utter.onend = () => finish(true);
+                utter.onerror = () => finish(false);
                 synth.speak(utter);
+
+                if (!settled) {
+                    startTimer = setTimeout(() => {
+                        if (!started && !synth.speaking) finish(false);
+                    }, 1500);
+                    maxTimer = setTimeout(() => finish(false), maxSpeechMs);
+                }
             } catch (err) {
                 resolve(false);
             }
@@ -502,47 +544,13 @@
             .replace(/'/g, '&#39;');
     }
 
-    function cdfApprox(z) {
-        if (z < -6) return 0;
-        if (z > 6) return 1;
-        const a1 = 0.254829592, a2 = -0.284496736, a3 = 1.421413741;
-        const a4 = -1.453152027, a5 = 1.061405429, p = 0.3275911;
-        const sign = z < 0 ? -1 : 1;
-        const x = Math.abs(z) / Math.sqrt(2);
-        const t = 1 / (1 + p * x);
-        const erf = 1 - ((((a5 * t + a4) * t + a3) * t + a2) * t + a1) * t * Math.exp(-x * x);
-        return 0.5 * (1 + sign * erf);
-    }
-
-    function ordinal(n) {
-        const suffixes = ['th', 'st', 'nd', 'rd'];
-        const value = n % 100;
-        return n + (suffixes[(value - 20) % 10] || suffixes[value] || suffixes[0]) + ' percentile';
-    }
-
-    function estimateScaledScore(rawScore) {
-        const draftMeanRaw = 15;
-        const draftRawSd = 3.5;
-        const scaled = Math.round(10 + ((rawScore - draftMeanRaw) / draftRawSd) * 3);
-        return Math.max(1, Math.min(19, scaled));
-    }
-
-    function classifyScaledScore(scaled) {
-        if (scaled >= 16) return 'Very High';
-        if (scaled >= 14) return 'High';
-        if (scaled >= 12) return 'High Average';
-        if (scaled >= 8) return 'Average';
-        if (scaled >= 6) return 'Low Average';
-        if (scaled >= 4) return 'Low';
-        return 'Very Low';
-    }
-
     $('arith-btn-start').addEventListener('click', () => {
         const feedbackCb = $('arith-chk-feedback');
         showAnswerFeedback = feedbackCb ? feedbackCb.checked : true;
 
         prewarmTTS();
         sessionId = generateSessionId();
+        participantId = getAnonymousParticipantId();
         allItems = buildSessionItems();
         currentItemIdx = 0;
         currentItem = null;
@@ -593,11 +601,9 @@
 
     function showReadyScreen() {
         const item = allItems[currentItemIdx];
-        const tier = getTierConfig(item.tier);
-
         $('arith-ready-item-num').textContent = String(currentItemIdx + 1);
         $('arith-ready-item-total').textContent = String(allItems.length);
-        $('arith-ready-tier-info').textContent = `${tier.label} - ${item.concept}`;
+        $('arith-ready-tier-info').hidden = true;
         $('arith-btn-go').disabled = false;
         showScreen('ready');
     }
@@ -696,9 +702,16 @@
         const result = {
             itemPosition: currentItemIdx + 1,
             itemId: currentItem.id,
+            bankVersion: currentItem.bankVersion,
+            familyId: currentItem.familyId,
+            variantIndex: currentItem.variantIndex,
             tier: currentItem.tier,
             tierLabel: getTierConfig(currentItem.tier).label,
             concept: currentItem.concept,
+            difficultyOrder: currentItem.difficultyOrder,
+            operationCount: currentItem.operationCount,
+            workingMemoryLoad: currentItem.workingMemoryLoad,
+            calibrationStatus: currentItem.calibrationStatus,
             prompt: currentItem.prompt,
             correctAnswer: formatAnswer(currentItem),
             rawAnswer: rawAnswer,
@@ -708,8 +721,6 @@
             timedOut: timedOut,
             skipped: skipped,
             repeatCount: repeatsUsed,
-            seedAccuracy: currentItem.seedAccuracy,
-            seedMedianSeconds: currentItem.seedMedianSeconds,
         };
         results.push(result);
 
@@ -756,9 +767,6 @@
         const repeats = results.reduce((sum, result) => sum + result.repeatCount, 0);
         const timedOutCount = results.filter((result) => result.timedOut).length;
         const skippedCount = results.filter((result) => result.skipped).length;
-        const scaledEstimate = estimateScaledScore(totalScore);
-        const z = (scaledEstimate - 10) / 3;
-        const percentile = Math.round(cdfApprox(z) * 100);
 
         return {
             totalScore,
@@ -768,18 +776,16 @@
             repeatCount: repeats,
             timedOutCount,
             skippedCount,
-            scaledEstimate,
-            classification: classifyScaledScore(scaledEstimate),
-            percentile,
+            scoreStatus: 'uncalibrated',
         };
     }
 
     function showResults() {
         const summary = getSummary();
 
-        $('arith-result-scaled').textContent = String(summary.scaledEstimate);
-        $('arith-result-classification').textContent = summary.classification;
-        $('arith-result-percentile').textContent = ordinal(summary.percentile);
+        $('arith-result-scaled').textContent = `${summary.totalScore} / ${summary.maxScore}`;
+        $('arith-result-classification').textContent = 'Local calibration pending';
+        $('arith-result-percentile').textContent = 'No IQ or percentile reported';
         $('arith-result-total').textContent = `${summary.totalScore} / ${summary.maxScore}`;
         $('arith-result-accuracy').textContent = Math.round(summary.accuracy * 100) + '%';
         $('arith-result-avg-time').textContent = (summary.meanResponseTimeMs / 1000).toFixed(1) + 's';
@@ -853,7 +859,8 @@
         return {
             testType: 'arithmetic_wais_style',
             testName: 'Arithmetic (WAIS-inspired)',
-            schemaVersion: 1,
+            schemaVersion: 2,
+            participantId: participantId,
             sessionId: sessionId,
             timestamp: new Date().toISOString(),
             completed: results.length === allItems.length,
@@ -864,6 +871,12 @@
                 speechRate: speechRate,
                 voice: selectedVoice ? selectedVoice.name : 'default',
                 itemSelection: TIER_CONFIG.map((tier) => `${tier.label}: ${tier.selectCount}`).join(', '),
+                bankVersion: BANK_SUMMARY.bankVersion,
+                bankItemCount: BANK_SUMMARY.itemCount,
+                bankModelCount: BANK_SUMMARY.modelCount,
+                variantsPerModel: BANK_SUMMARY.variantsPerModel,
+                selectionMethod: 'least-exposed model and item with randomized tie breaks',
+                priorSessionsTracked: priorSessionsTracked,
             },
             survey: {
                 age: getOptionalAge('arith-input-age'),
@@ -878,16 +891,21 @@
                 repeatCount: summary.repeatCount,
                 timedOutCount: summary.timedOutCount,
                 skippedCount: summary.skippedCount,
-                scaledEstimate: summary.scaledEstimate,
-                classification: summary.classification,
-                percentile: summary.percentile,
+                scoreStatus: summary.scoreStatus,
             },
             items: results.map((result) => ({
                 itemPosition: result.itemPosition,
                 itemId: result.itemId,
+                bankVersion: result.bankVersion,
+                familyId: result.familyId,
+                variantIndex: result.variantIndex,
                 tier: result.tier,
                 tierLabel: result.tierLabel,
                 concept: result.concept,
+                difficultyOrder: result.difficultyOrder,
+                operationCount: result.operationCount,
+                workingMemoryLoad: result.workingMemoryLoad,
+                calibrationStatus: result.calibrationStatus,
                 prompt: result.prompt,
                 correctAnswer: result.correctAnswer,
                 rawAnswer: result.rawAnswer,
@@ -897,8 +915,6 @@
                 timedOut: result.timedOut,
                 skipped: result.skipped,
                 repeatCount: result.repeatCount,
-                seedAccuracy: result.seedAccuracy,
-                seedMedianSeconds: result.seedMedianSeconds,
             })),
         };
     }
@@ -940,9 +956,17 @@
 
         const payload = {
             testType: 'arithmetic_wais_style',
-            schemaVersion: 1,
+            schemaVersion: 2,
+            participantId: participantId,
             sessionId: sessionId,
             timestamp: new Date().toISOString(),
+            bankVersion: BANK_SUMMARY.bankVersion,
+            bankItemCount: BANK_SUMMARY.itemCount,
+            bankModelCount: BANK_SUMMARY.modelCount,
+            variantsPerModel: BANK_SUMMARY.variantsPerModel,
+            selectionMethod: 'least-exposed model and item with randomized tie breaks',
+            priorSessionsTracked: priorSessionsTracked,
+            scoreStatus: summary.scoreStatus,
             age: age,
             caitWmi: caitWmi,
             coreWmi: coreWmi,
@@ -956,7 +980,6 @@
             timedOutCount: summary.timedOutCount,
             skippedCount: summary.skippedCount,
             repeatCount: summary.repeatCount,
-            scaledEstimate: summary.scaledEstimate,
             speechRate: speechRate,
             ...tierSummary,
             items: results,
@@ -992,7 +1015,7 @@
     function getOptionalAge(inputId) {
         const input = $(inputId);
         const value = input ? parseInt(input.value, 10) : null;
-        return Number.isFinite(value) && value >= 10 && value <= 100 ? value : '';
+        return Number.isFinite(value) && value >= 16 && value <= 90 ? value : '';
     }
 
     function getOptionalStandardScore(inputId) {

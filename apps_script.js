@@ -78,7 +78,9 @@ function handleArithmeticPost(data) {
     'very_easy_correct', 'very_easy_max', 'very_easy_pct',
     'easy_correct', 'easy_max', 'easy_pct',
     'medium_correct', 'medium_max', 'medium_pct',
-    'semi_hard_correct', 'semi_hard_max', 'semi_hard_pct'
+    'semi_hard_correct', 'semi_hard_max', 'semi_hard_pct',
+    'participantId', 'bankVersion', 'bankItemCount', 'bankModelCount', 'variantsPerModel',
+    'selectionMethod', 'priorSessionsTracked', 'scoreStatus'
   ]);
 
   if (isDuplicateSession(sessionsSheet, sessionHeaders, data.sessionId)) {
@@ -101,7 +103,9 @@ function appendArithmeticItems(data) {
     'itemPosition', 'itemId', 'tier', 'tierLabel', 'concept',
     'score', 'correct', 'rawAnswer', 'correctAnswer',
     'responseTimeMs', 'responseTimeSec', 'timedOut', 'skipped', 'repeatCount',
-    'seedAccuracy', 'seedMedianSeconds'
+    'seedAccuracy', 'seedMedianSeconds',
+    'participantId', 'bankVersion', 'familyId', 'variantIndex', 'difficultyOrder',
+    'operationCount', 'workingMemoryLoad', 'calibrationStatus', 'prompt'
   ]);
 
   var rows = [];
@@ -109,6 +113,7 @@ function appendArithmeticItems(data) {
     var item = items[i];
     rows.push(headers.map(function(key) {
       if (key === 'sessionId') return data.sessionId || '';
+      if (key === 'participantId') return data.participantId || '';
       if (key === 'timestamp') return data.timestamp || '';
       if (key === 'age') return data.age || '';
       if (key === 'caitWmi') return data.caitWmi || '';

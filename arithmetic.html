@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Arithmetic - Working Memory Assessment</title>
+    <title>Arithmetic - Mental Calculation Assessment</title>
     <meta name="description" content="WAIS-style mental arithmetic assessment with randomized items, spoken prompts, 30-second limits, and norm collection.">
     <link rel="stylesheet" href="styles.css">
 </head>
@@ -17,7 +17,7 @@
         <div id="arith-screen-welcome" class="screen active">
             <div class="card welcome-card">
                 <h1>Arithmetic</h1>
-                <p class="subtitle">Working Memory - Mental Calculation</p>
+                <p class="subtitle">Mental Calculation - Quantitative Reasoning</p>
 
                 <div class="info-box">
                     <h3>Instructions</h3>
@@ -39,13 +39,13 @@
                 </div>
                 <div class="settings-row">
                     <label for="arith-voice-rate">Rate:</label>
-                    <input type="range" id="arith-voice-rate" min="0.7" max="1.15" step="0.05" value="0.95">
-                    <span id="arith-voice-rate-label">0.95x</span>
+                    <input type="range" id="arith-voice-rate" min="0.7" max="1.15" step="0.05" value="1.0">
+                    <span id="arith-voice-rate-label">1.00x</span>
                 </div>
                 <div class="settings-row">
                     <label for="arith-chk-feedback">Feedback:</label>
                     <label class="toggle-label">
-                        <input type="checkbox" id="arith-chk-feedback" checked>
+                        <input type="checkbox" id="arith-chk-feedback">
                         <span>Show correct/incorrect after each item</span>
                     </label>
                 </div>
@@ -121,7 +121,7 @@
                 <h1>Arithmetic Complete</h1>
 
                 <div class="iq-hero">
-                    <span class="iq-label">Arithmetic - Draft Baseline Estimate</span>
+                    <span class="iq-label">Arithmetic - Experimental Raw Performance</span>
                     <span id="arith-result-scaled" class="iq-score"></span>
                     <span id="arith-result-classification" class="iq-classification"></span>
                     <span id="arith-result-percentile" class="iq-percentile"></span>
@@ -162,15 +162,15 @@
                             </tr>
                         </thead>
                         <tbody>
-                            <tr><td>Items</td><td>22 randomized mental arithmetic items</td></tr>
+                            <tr><td>Items</td><td>22 randomized questions drawn from 960 stable original items</td></tr>
                             <tr><td>Scoring</td><td>1 point for each exact numeric answer</td></tr>
                             <tr><td>Time limit</td><td>30 seconds per item</td></tr>
                             <tr><td>Item norms</td><td>Public item-level WAIS norms were not available; this app records item ID, timing, repeats, and correctness for local norm building.</td></tr>
                         </tbody>
                     </table>
                     <p class="norm-note">
-                        Public references confirm WAIS-IV Arithmetic is a 22-item Working Memory subtest with raw scores from 0 to 22 and timed item administration.
-                        Official item content and age norms are proprietary, so the estimate above is only a draft baseline until enough app data is collected.
+                        WAIS-IV publicly used 22 dichotomous Arithmetic items; WAIS-5 score entry allows a 0-25 Arithmetic raw score and places Arithmetic with fluid-reasoning measures.
+                        This original 22-item form is not score-equivalent to either edition. An IQ, scaled score, or percentile will not be reported until representative local calibration data exist.
                     </p>
                 </div>
 
@@ -179,7 +179,7 @@
                     <p class="norm-submit-desc">Submit your results anonymously to help build item-level norms. No personally identifiable information is collected.</p>
                     <div class="norm-submit-row">
                         <label for="arith-input-age">Age (optional):</label>
-                        <input type="number" id="arith-input-age" min="10" max="100" placeholder="e.g. 25" class="age-input">
+                        <input type="number" id="arith-input-age" min="16" max="90" placeholder="e.g. 25" class="age-input">
                     </div>
                     <div class="norm-submit-row">
                         <label for="arith-input-cait-wmi">CAIT WMI (optional):</label>
@@ -201,6 +201,7 @@
         </div>
     </div>
 
+    <script src="arithmetic_bank.js"></script>
     <script src="arithmetic.js"></script>
 </body>
 </html>
